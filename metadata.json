@@ -1,0 +1,7 @@
+{
+  "name": "Sincerão Digital",
+  "description": "A high-stakes social party game inspired by reality show 'Sincerão'. Vote, justify, and reveal truths with your friends in a vibrant neon-styled interactive experience.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
