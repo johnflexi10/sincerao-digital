@@ -8,7 +8,8 @@ export enum MultiplayerEvent {
   EMOTE = 'emote',
   LOG = 'log',
   CHAT = 'chat',
-  AUDIO = 'audio'
+  AUDIO = 'audio',
+  REQUEST_SYNC = 'request_sync'
 }
 
 export interface MultiplayerAction {
@@ -120,6 +121,11 @@ class MultiplayerService {
         case MultiplayerEvent.AUDIO:
           this.onAudio?.(payload);
           break;
+        case MultiplayerEvent.REQUEST_SYNC:
+          if (this.isHost) {
+            this.onAction?.({ type: 'REQUEST_SYNC', payload: {}, senderId: conn.peer });
+          }
+          break;
       }
     });
 
@@ -190,6 +196,14 @@ class MultiplayerService {
       if (hostConn?.open) {
         hostConn.send({ type: MultiplayerEvent.AUDIO, payload: audioBlob });
       }
+    }
+  }
+
+  requestSync() {
+    if (this.isHost) return;
+    const hostConn = Array.from(this.connections.values())[0];
+    if (hostConn?.open) {
+      hostConn.send({ type: MultiplayerEvent.REQUEST_SYNC, payload: {} });
     }
   }
 

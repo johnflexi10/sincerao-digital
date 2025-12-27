@@ -97,6 +97,7 @@ const App: React.FC = () => {
   // Chat & SFX
   const [chatMessages, setChatMessages] = useState<{ id: number; text: string; sender: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const playSFX = (type: 'buzzer' | 'success' | 'alert' | 'pop') => {
     const sfxMap = {
@@ -150,6 +151,9 @@ const App: React.FC = () => {
         if (isHost) {
           addLog(`${player.name} ENTROU NA CASA!`);
           setGameState(prev => {
+            // Check for existing player with same ID (prevent duplicate bots/rejoins)
+            if (prev.players.find(p => p.id === player.id)) return prev;
+
             const newState = {
               ...prev,
               players: [...prev.players, player]
@@ -158,6 +162,9 @@ const App: React.FC = () => {
             setTimeout(() => multiplayerService.broadcastState(newState), 500);
             return newState;
           });
+        } else {
+          // Client: Request sync when someone joins (just in case)
+          multiplayerService.requestSync();
         }
       }
     });
@@ -188,11 +195,11 @@ const App: React.FC = () => {
         }
         playSFX('alert');
         break;
-      case 'CHAT':
-        const id = Date.now();
-        setChatMessages(prev => [...prev.slice(-4), { id, text: payload.msg, sender: payload.sender }]);
-        setTimeout(() => setChatMessages(prev => prev.filter(m => m.id !== id)), 4000);
-        playSFX('pop');
+        break;
+      case 'REQUEST_SYNC':
+        if (isHost) {
+          multiplayerService.broadcastState(stateRef.current);
+        }
         break;
     }
   };
@@ -897,19 +904,19 @@ const App: React.FC = () => {
             <div className="w-full grid grid-cols-4 gap-3 py-4 border-b border-white/5">
               {gameState.players.map(p => <PlayerAvatar key={p.id} player={p} size="sm" isHighlighted={gameState.votes[p.id] !== undefined} label={getPlayerLabel(p)} />)}
             </div>
-            <div className="w-full space-y-4 pt-4">
+            <div className="w-full space-y-3 pt-2">
               {['APOIO', 'DISCORDO', 'NEUTRO'].map(v => (
                 <button
                   key={v}
                   disabled={isMeCurrent || isMeTarget}
                   onClick={() => castVote(localPlayerId, v as any)}
-                  className={`w-full py-6 rounded-3xl border-2 transition-all flex items-center justify-between px-6 ${gameState.votes[localPlayerId] === v ? 'bg-white/10 border-cyan-500 shadow-xl' : 'bg-white/5 border-white/10 opacity-60'}`}
+                  className={`w-full py-4 rounded-2xl border-2 transition-all flex items-center justify-between px-5 ${gameState.votes[localPlayerId] === v ? 'bg-white/10 border-cyan-500 shadow-xl' : 'bg-white/5 border-white/10 opacity-70'}`}
                 >
-                  <span className="text-3xl">{v === 'APOIO' ? '✅' : v === 'DISCORDO' ? '❌' : '🧼'}</span>
+                  <span className="text-2xl">{v === 'APOIO' ? '✅' : v === 'DISCORDO' ? '❌' : '🧼'}</span>
                   <div className="flex flex-col items-end">
-                    <span className="font-black text-2xl tracking-tighter uppercase italic">{v === 'APOIO' ? 'Acreditei' : v === 'DISCORDO' ? 'Pipocou' : 'No Muro'}</span>
+                    <span className="font-black text-xl tracking-tighter uppercase italic">{v === 'APOIO' ? 'Acreditei' : v === 'DISCORDO' ? 'Pipocou' : 'No Muro'}</span>
                     {localPlayerId && gameState.players.find(p => p.id === localPlayerId)?.powerUsed && gameState.players.find(p => p.id === localPlayerId)?.power === PowerType.VOTO_DUPLO && (
-                      <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest mt-[-4px]">Poder x2 Ativo</span>
+                      <span className="text-[7px] font-black text-cyan-400 uppercase tracking-widest mt-[-2px]">Poder x2 Ativo</span>
                     )}
                   </div>
                 </button>
@@ -978,15 +985,44 @@ const App: React.FC = () => {
     <div className="h-[100dvh] max-w-md mx-auto relative flex flex-col bg-slate-950 overflow-y-auto font-['Outfit'] select-none scrollbar-hide">
       <div className="crt-overlay"></div>
 
-      {/* FLOATING CHAT */}
-      <div className="fixed top-32 right-4 z-50 flex flex-col gap-2 items-end pointer-events-none">
-        {chatMessages.map(m => (
-          <div key={m.id} className="bg-cyan-500/20 border border-cyan-400/50 backdrop-blur-xl px-4 py-2 rounded-2xl animate-in slide-in-from-right fade-in duration-300">
-            <span className="text-[8px] font-black text-white/50 block uppercase tracking-widest">{m.sender}</span>
-            <p className="text-white text-sm font-bold italic tracking-tight">{m.text}</p>
+      {/* TOGGLEABLE CHAT DRAWER */}
+      <div className={`fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-2xl transition-all duration-500 ${isChatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="h-full flex flex-col p-6 pt-20">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-black italic text-cyan-400 uppercase tracking-tighter italic">Conversas da Casa</h3>
+            <button onClick={() => setIsChatOpen(false)} className="bg-white/5 p-4 rounded-full text-xl">✕</button>
           </div>
-        ))}
+
+          <div className="flex-grow overflow-y-auto space-y-3 pb-32 scrollbar-hide">
+            {chatMessages.length === 0 && <p className="text-white/20 text-center italic py-20 uppercase text-[10px] tracking-widest font-black">Nenhuma fofoca por enquanto...</p>}
+            {chatMessages.map(m => (
+              <div key={m.id} className={`max-w-[85%] p-4 rounded-3xl ${m.sender === (gameState.players.find(p => p.id === localPlayerId)?.name || 'VOCÊ') ? 'bg-cyan-500/20 border border-cyan-400/30 self-end ml-auto' : 'bg-white/5 border border-white/10 self-start mr-auto'}`}>
+                <span className="text-[8px] font-black text-white/40 block uppercase tracking-widest mb-1">{m.sender}</span>
+                <p className="text-white text-sm font-bold italic tracking-tight">{m.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 p-6 bg-slate-950/80 backdrop-blur-xl border-t border-white/5">
+            <div className="glass p-2 rounded-full flex gap-2 border border-white/10">
+              <input
+                type="text"
+                placeholder="Digitar fofoca..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendChat(chatInput)}
+                className="flex-1 bg-white/5 border border-white/5 rounded-full px-5 py-3 text-sm focus:outline-none placeholder:text-white/20 text-white"
+              />
+              <button onClick={() => sendChat(chatInput)} className="bg-cyan-600 text-white p-3 px-6 rounded-full text-xs font-black uppercase transition-all active:scale-95">ENVIAR</button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <button onClick={() => setIsChatOpen(true)} className="fixed bottom-32 right-6 z-[60] bg-cyan-600 p-5 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.5)] border border-cyan-400/50 active:scale-90 transition-all">
+        <span className="text-2xl">💬</span>
+        {chatMessages.length > 0 && <div className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full border-2 border-slate-950 animate-pulse"></div>}
+      </button>
 
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] bg-fuchsia-600/10 blur-[150px] rounded-full"></div>
