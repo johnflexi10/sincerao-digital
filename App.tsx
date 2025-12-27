@@ -133,8 +133,7 @@ const App: React.FC = () => {
       onEmote: (emoji) => sendEmote(emoji),
       onChat: (msg: string, sender: string) => {
         const id = Date.now();
-        setChatMessages(prev => [...prev.slice(-4), { id, text: msg, sender }]);
-        setTimeout(() => setChatMessages(prev => prev.filter(m => m.id !== id)), 4000);
+        setChatMessages(prev => [...prev, { id, text: msg, sender }]);
       },
       onLog: (msg) => {
         addLog(msg);
@@ -216,8 +215,7 @@ const App: React.FC = () => {
 
     if (isHost) {
       const id = Date.now();
-      setChatMessages(prev => [...prev.slice(-4), { id, text, sender }]);
-      setTimeout(() => setChatMessages(prev => prev.filter(m => m.id !== id)), 4000);
+      setChatMessages(prev => [...prev, { id, text, sender }]);
       multiplayerService.broadcastChat(text, sender);
     } else {
       multiplayerService.sendAction({ type: 'CHAT' as any, payload: { msg: text, sender }, senderId: localPlayerId });
