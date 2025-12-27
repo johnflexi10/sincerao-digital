@@ -642,17 +642,17 @@ const App: React.FC = () => {
     switch (gameState.phase) {
       case GamePhase.LOBBY:
         return (
-          <div className="flex-grow flex flex-col justify-center items-center w-full max-w-sm mx-auto p-6 gap-10">
-            <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-cyan-400 animate-neon tracking-tighter italic text-center">SINCERÃO</h1>
+          <div className="flex-grow flex flex-col justify-start items-center w-full max-w-sm mx-auto p-6 pt-10 pb-32 gap-10">
+            <h1 className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-cyan-400 animate-neon tracking-tighter italic text-center shrink-0">SINCERÃO</h1>
 
             <div className="flex flex-col items-center justify-center w-full gap-5">
               <div className="relative group">
                 <div
                   onClick={() => setIsAvatarPickerOpen(true)}
-                  className="w-40 h-40 rounded-full glass border-4 border-fuchsia-500/50 flex items-center justify-center text-7xl cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(192,38,211,0.3)] relative"
+                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full glass border-4 border-fuchsia-500/50 flex items-center justify-center text-6xl sm:text-7xl cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(192,38,211,0.3)] relative"
                 >
                   {selectedAvatar}
-                  <div className="absolute bottom-2 right-2 bg-fuchsia-600 p-2.5 rounded-full border-2 border-slate-900 text-sm shadow-xl">✨</div>
+                  <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-fuchsia-600 p-2 sm:p-2.5 rounded-full border-2 border-slate-900 text-[10px] sm:text-sm shadow-xl">✨</div>
                 </div>
               </div>
               <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] text-center w-full animate-pulse">
@@ -975,7 +975,7 @@ const App: React.FC = () => {
   const currentPlayerLocal = gameState.players.find(p => p.id === localPlayerId);
 
   return (
-    <div className="min-h-screen max-w-md mx-auto relative flex flex-col bg-slate-950 overflow-hidden font-['Outfit'] select-none">
+    <div className="h-[100dvh] max-w-md mx-auto relative flex flex-col bg-slate-950 overflow-y-auto font-['Outfit'] select-none scrollbar-hide">
       <div className="crt-overlay"></div>
 
       {/* FLOATING CHAT */}
@@ -1026,7 +1026,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-grow flex flex-col relative z-10 pt-32">
+      <main className="flex-grow flex flex-col relative z-10 pt-20 sm:pt-32">
         {renderPhase()}
       </main>
 
@@ -1065,6 +1065,8 @@ const App: React.FC = () => {
         .animate-float-up { animation: float-up 2s ease-out forwards; }
         @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-1px, 1px); } 40% { transform: translate(-1px, -1px); } 60% { transform: translate(1px, 1px); } 80% { transform: translate(1px, -1px); } 100% { transform: translate(0); } }
         .animate-glitch { animation: glitch 0.25s cubic-bezier(.25,.46,.45,.94) infinite alternate-reverse; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   );
